@@ -1,0 +1,21 @@
+version: '3.6'
+
+services:
+  pentahoServer:
+      image: pentaho/server:8.3.0.0
+      ports:
+        - "8081:8080"
+        - "8044:8044"
+        - "9001:9001"
+      environment: 
+        - CATALINA_OPTS=>-
+            -Xmx3g  
+            -Dfile.encoding=utf8 
+            -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8044
+            -Dpentaho.installed.licenses.file=/run/secrets/pentaho_license 
+      #volumes:
+      #  - "./../../Other/security/memory:/opt/pentaho/pentaho-server/tomcat/webapps/pentaho/WEB-INF/classes/org/pentaho/platform/plugin/services/security/userrole/memory"
+      #  - "./../../Other/security/security:/opt/pentaho/pentaho-server/tomcat/webapps/pentaho/WEB-INF/classes/org/pentaho/platform/repository2/unified/jcr/jackrabbit/security"
+  repository:
+    ports:
+      - "5432:5432"

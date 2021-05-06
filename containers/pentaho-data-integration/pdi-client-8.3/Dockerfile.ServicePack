@@ -1,0 +1,94 @@
+#######################################################################################################
+# The build process is done in 2 parts to make the final image as slim as possible                    #
+# build image (install_unpack) copies and unpacks the software distributio  packages                  #
+# build image (pack) moves from install_unpack the files and defines workspace, entry-poit and others #
+#######################################################################################################
+
+
+
+##################################################################################################
+# Here we use a "build" image for packing to make the final image as small as possible           #
+##################################################################################################
+FROM openjdk:8-jre as install_unpack
+
+WORKDIR /opt/pentaho-installer/
+
+#ARGUMENTS
+ARG FILE_SOFTWARE=pdi-ee-client-8.3.0.0-371-dist.zip
+ARG FILE_SOFTWARE_SERVICEPACK=PDIClient-SP-8.3.0.12-869.bin
+
+COPY ./predownloaded/* /opt/pentaho-installer/
+
+##########################################
+# Here comes the GA Install part
+RUN if [ ! -f "/opt/pentaho-installer/$FILE_SOFTWARE" ]; \
+        then \
+        echo "File $FILE_SOFTWARE Not Found in predownloaded, please download and copy to predownloaded folder"; exit 2; \
+        fi;
+
+# UNZIP and INSNTALL the Pentaho Client 
+RUN unzip ${FILE_SOFTWARE}; 
+RUN java -DINSTALL_PATH=/opt/pentaho/ -DEULA_ACCEPT=true -jar ./pdi-ee-client-8.3.0.0-371/installer.jar -options-system; 
+
+
+##########################################
+# Here comes the service Pack Install part
+RUN if [ ! -f "/opt/pentaho-installer/$FILE_SOFTWARE_SERVICEPACK" ]; \
+        then echo "File $FILE_SOFTWARE_SERVICEPACK Not Found in predownloaded, please download and copy to predownloaded folder"; exit 3; \
+    fi;
+
+# SERVICE PACK PROCESS
+RUN mkdir /opt/pentaho/path_files; \
+    chmod 755 ${FILE_SOFTWARE_SERVICEPACK}; \
+    /opt/pentaho-installer/${FILE_SOFTWARE_SERVICEPACK} -i silent -DEULA_ACCEPT=true -DMANUAL_PATCH_PATH=/opt/pentaho/path_files -DSILENT_LOG=/opt/pentaho-installer/pentaho-servicepack-installer.log -DSOURCE_VERSION=8.3.0.0; \
+    cat /opt/pentaho-installer/pentaho-servicepack-installer.log; \
+    cp -r /opt/pentaho/path_files/* /opt/pentaho/data-integration/
+    
+
+##########################################
+# Copy External Resources
+# This can be used to override or add new Libraries, JDBCs, Configuration, etc...
+
+COPY ./resources/* /opt/pentaho/data-integration/
+
+##################################################################################################
+# Here is where we create the final image                                                        #
+##################################################################################################
+FROM openjdk:8-jdk as pack
+
+# In case of Ubuntu we need to install a few things...
+#FROM ubuntu:latest
+#RUN apt-get update; \
+#     apt-get install -y libwebkitgtk-1.0-0; \
+#     apt-get install -y openjdk-8-jre;
+     
+#Default to Windows host, please override for other cases
+#ENV DISPLAY=host.docker.internal:0
+
+# Create unprivileged user
+ENV PENTAHO_UID="1000"
+ENV PENTAHO_HOME=/home/pentaho 
+RUN useradd -u "${PENTAHO_UID:?}" -g 0 -s "$(command -v bash)" -md "${PENTAHO_HOME:?}" pentaho
+
+#This Setting is to skipe WEB TOOLKIT GTK Check. Since the use of this mack normally does no use GUI.
+# If you want GUI, then istall libwebkitgtk-1.0-0 as the line commented above
+ENV SKIP_WEBKITGTK_CHECK=1
+
+COPY --from=install_unpack  /opt/pentaho/data-integration/ /opt/pentaho/data-integration/
+
+#Assign permissions to pentaho on /opt/pentaho
+RUN chown -R pentaho:root /opt/pentaho
+
+#While this volume is for License, you can use "secrets" and point to /run/secrets/installedLicenses.xml.
+VOLUME [ "/opt/pentaho/installedLicenses.xml"]
+WORKDIR /opt/pentaho/data-integration
+
+ENV PENTAHO_DI_JAVA_OPTIONS="-Dfile.encoding=utf8 -Dpentaho.installed.licenses.file=/opt/pentaho/installedLicenses.xml -XX:+UseConcMarkSweepGC -XX:+ExplicitGCInvokesConcurrent -XX:+CMSClassUnloadingEnabled -XX:+AggressiveOpts" 
+# WARNING carefull with the below options, REMOVED from default, 
+#         because if the Container does not have memory limits, 
+#         then it can use all the host memory.
+# -XX:MinRAMPercentage=60.0 -XX:MaxRAMPercentage=90.0
+
+#Drop root privileges
+USER 1000:0
+

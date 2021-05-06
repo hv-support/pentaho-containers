@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: carte-service
+  labels:
+    app: carte-service
+spec:
+  type: NodePort
+  selector:
+    app: carte
+  ports:
+    - port: 9080
+      targetPort: 9080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdi-gke-carte-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carte
+  template:
+    metadata:
+      labels:
+        app: carte
+    spec:
+      volumes:
+        - name: key
+          secret:
+            secretName: key
+        - name: pentaho-license
+          secret:
+            secretName: pentaho-license
+        - name: carte-config
+          configMap:
+            name: carte-config
+      containers:
+      - name: pdi-gke-carte-server
+        image: gcr.io/pentaho-support-team/pentaho/carte4tray:8.3.0.8
+        imagePullPolicy: "Always"
+        resources:
+          limits:
+            memory: "2500Mi"
+          requests:
+            memory: "2000Mi"
+        ports:
+          - containerPort: 9080
+        volumeMounts:
+            - name: key
+              mountPath: "/secrets/key"
+            - name: pentaho-license
+              mountPath: "/secrets/pentahoLicense"
+            - name: carte-config
+              mountPath: "/opt/pentaho/data-integration/pwd/"
+        env:
+            - name: GCOUD_PENTAHO_PROJECT_PATH
+              value: "gs://support-emea-hv/demo-db/project-artifact.zip"
+            - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
+              value: "/secrets/key/key.json"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/secrets/key/key.json"
+            - name: PENTAHO_INSTALLED_LICENSE_PATH
+              value: "/secrets/pentahoLicense/.installedLicenses.xml"
+            - name: PENTAHO_DI_JAVA_OPTIONS
+              value: "-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:+UseCGroupMemoryLimitForHeap -Dfile.encoding=utf8 -XX:MaxRAMPercentage=80.0 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC"  
+              #value: "-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:+UseCGroupMemoryLimitForHeap -Dfile.encoding=utf8 -XX:MaxRAMPercentage=80.0 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC -XX:+ExplicitGCInvokesConcurrent -XX:+CMSClassUnloadingEnabled -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90"  
+              #value: "-XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:+UseCGroupMemoryLimitForHeap -Dfile.encoding=utf8 -XX:MaxRAMPercentage=80.0 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:+ExitOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:+ExplicitGCInvokesConcurrent -XX:+CMSClassUnloadingEnabled -XX:GCTimeRatio=5 -XX:AdaptiveSizePolicyWeight=90 -XX:+AggressiveOpts"  
+              #value: "-XX:+UseContainerSupport -XX:MinRAMPercentage=25.0 -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication -XX:G1ReservePercent=10"
+        #command: ["./kitchen -file=$PENTAHO_PROJECT_PATH/generateLongLog.kjb"]  
+        #command: ["bash"]
+        #args: ["/opt/pentaho/data-integration/carte.sh", "/opt/pentaho/data-integration/pwd/carte-config-master-8080.xml"]  
+        #args: ["/opt/pentaho/data-integration/carte.sh", "$CURRENT_HOSTNAME", "8080"]  
+        #args: ["bash"]
+        

@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: pdi-job-
+  labels:
+    app: pdi-job
+spec:
+  template:
+    spec:
+      volumes:
+        - name: key
+          secret:
+            secretName: key
+        - name: pentaho-license
+          secret:
+            secretName: pentaho-license
+      containers:
+      - name: pdi-job-container
+        image: gcr.io/pentaho-support-team/pentaho/pdi-client:8.3.0.0-gcp-v2
+        volumeMounts:
+            - name: key
+              mountPath: "/secrets/key"
+            - name: pentaho-license
+              mountPath: "/secrets/pentahoLicense"
+        env:
+            - name: GCOUD_PENTAHO_PROJECT_PATH
+              value: "gs://support-emea-hv/demo-db/project-artifact.zip"
+            - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
+              value: "/secrets/key/key.json"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/secrets/key/key.json"
+            - name: PENTAHO_INSTALLED_LICENSE_PATH
+              value: "/secrets/pentahoLicense/.installedLicenses.xml" 
+        #command: ["ls", "/"]
+        #command: ["/opt/pentaho/data-integration/kitchen.sh", "-file=/opt/pentaho/project/generateLongLog.kjb"]
+        args: ["/opt/pentaho/data-integration/kitchen.sh", "-file=$${JOBPATH}"]
+        #args: ["/opt/pentaho/data-integration/kitchen.sh", "-file=/opt/pentaho/project/longExecution.kjb"]
+        #args: ["cat", "/docker-entrypoint.sh"]
+      restartPolicy: Never
+        
+        
+        

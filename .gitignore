@@ -1,0 +1,11 @@
+local/*
+.vscode/*
+containers/pentaho-data-integration/pdi-client-8.3/predownloaded/*.zip
+containers/pentaho-data-integration/pdi-client-8.3/predownloaded/*.bin
+containers/pentaho-data-integration/pdi-client-8.3/resources/plugins/*
+containers/pentaho-data-integration/pdi-client-8.3/resources/lib/*
+containers/pentaho-data-integration/pdi-client-gcp/resources/plugins/*
+containers/pentaho-data-integration/pdi-client-gcp/resources/demo/*
+containers/pentaho-data-integration/pdi-client-gcp/resources/pwd/*
+containers/tray/predownloaded/*.zip
+containers/pentaho-server/pentaho-server-9.1/predownloaded/*.zip

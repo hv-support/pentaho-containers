@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+  <!-- imports the secret properties so passwords are stored in a different file where they can be encoded/encrypted -->
+  <context:property-placeholder location="classpath:secrets.properties" ignore-unresolvable="true"  />
+
+  <!-- The default work queue and active work use the memory implementation, but
+  	   they get overridden by the database configuration when the database persistence lines
+  	   are uncommented below.
+   -->
+  <bean id="workQueue" class="org.pentaho.carte.clustering.server.work.persist.mem.MemoryWorkQueue" />
+  <bean id="activeWork" class="org.pentaho.carte.clustering.server.work.persist.mem.MemoryActiveWork" />
+
+  <!-- To enable database persistence mode, simply uncomment the context tag and
+       server-config-db.xml import line below, which will override the memory persistence beans
+       with the database persistence beans. You will have to update the context line to correspond with
+       your RDBMS:
+           - MySQL (mysql.properties)
+           - PostGRES (postgres.properties)
+           - Oracle (oracle.properties)
+       
+       You will also have to update the corresponding properties file with
+       your database connection url, user, and password. For your convenience,
+       sample database schema creation scripts are included in the /data directory. 
+   -->
+  
+  <context:property-placeholder location="classpath:mysql.properties" ignore-unresolvable="true" />
+  <import resource="server-config-db.xml" />
+
+  <bean id="workerServers" class="org.pentaho.carte.clustering.server.workers.WorkerServers" scope="singleton">
+
+    <property name="distributeServer" ref="server" />
+
+    <!-- Should work be accepted when there are no commissioned workers? -->
+    <property name="returnCapableWithNoWorkers" value="true" />
+
+    <!--  How many communication failures should occur before a carte is
+          automatically decommissioned? Once decommissioned, the carte
+          will automatically re-join when it gets a successful heartbeat
+
+          0, negative = disable auto-decommission
+          1 = decommission on the first failure (most communication methods have retry, so this is recommended)
+          2 = decommission after two consecutive communication failures
+          3 = decommission after three consecutive communication failures
+          ... n
+    -->
+    <property name="failuresBeforeDecommission" value="1" />
+
+    <!--
+      Decommission workers based on failure to receive heartbeat check ins
+      This property needs to be set with a value greater than the frequency
+      of heartbeats configured on the worker. The recommended value is
+      3 * carte_clustering_plugin's heartbeat interval
+
+      Value is specified in milliseconds
+
+      0, negative = disable auto-decommission
+
+      60000 = monitor for a check in within the last minute
+      120000 = monitor for a check in within the last two minutes
+
+    -->
+    <property name="checkInExpirationInterval" value="60000" />
+
+
+    <!--
+      Specifies (in milliseconds) how long the system should wait to remove
+      a worker node once it is decommissioned. Upon removal, a synchronize
+      with active work is performed and any jobs that remain on the node will
+      be finished with a state of "Unknown (Lost)". Configure this setting with
+      a value higher than the amount of time you would give a worker to re-join
+      a cluster
+     -->
+    <property name="decommissionedWorkerRemovalInterval" value="60000" />
+
+
+     <!--Defines the metrics to read during server registration and use as resource
+      constraints. For example, a jvm that reports its max_memory_mb of 8192 will never
+      be able to execute a job requiring 16356. If there are no workers that could execute
+      the job requirements, the work will be rejected upon add. If resources exist at
+      queue accept time, but are lost before execution, the job will Fail (Launch) because
+      no capable workers exist.
+     -->
+    <property name="workerCapabilityMetrics">
+      <list value-type="java.lang.String">
+        <value>max_memory_mb</value>
+        <value>num_processors</value>
+      </list>
+    </property>
+
+    <!--Defines the consumable resources that are created upon worker server registration
+       In the example below, the server will pull the max_memory_mb (max memory of the jvm -Xmx)
+       and use that as the value to bank. Also, if the server posts a max_concurrent_jobs
+       metric, that will be used to create the banked allocatable_job_slots metric. If
+       the property is not found, the default of 10 jobs per worker will be used. When jobs
+       are run, these resource pools are consumed, thus limiting the amount of work any
+       one worker can take on
+    -->
+      <property name="workerConsumableResources">
+        <map key-type="java.lang.String" value-type="org.pentaho.carte.clustering.server.metrics.DerefWithDefault">
+          <entry key="allocatable_memory_mb">
+            <bean class="org.pentaho.carte.clustering.server.metrics.DerefWithDefault">
+              <property name="derefMetric" value="max_memory_mb" />
+              <property name="defaultValue" value="0" />
+            </bean>
+          </entry>
+          <entry key="allocatable_job_slots">
+            <bean class="org.pentaho.carte.clustering.server.metrics.DerefWithDefault">
+              <property name="derefMetric" value="max_concurrent_jobs" />
+              <property name="defaultValue" value="10" />
+            </bean>
+          </entry>
+        </map>
+      </property>
+    </bean>
+
+  <bean id="jettyServer" name="Main" class="org.eclipse.jetty.server.Server">
+    <constructor-arg>
+        <bean id="threadPool" class="org.eclipse.jetty.util.thread.QueuedThreadPool">
+            <property name="minThreads" value="10"/>
+            <property name="maxThreads" value="100"/>  <!-- specify the max number of threads -->
+        </bean>
+    </constructor-arg>
+    <property name="connectors">
+        <list>
+    <!--      <bean id="SecureConnector" class="org.eclipse.jetty.server.ServerConnector">
+            <constructor-arg ref="jettyServer" />
+            <constructor-arg>
+              <bean id="handlers" class="org.eclipse.jetty.util.ssl.SslContextFactory">
+
+                <property name="keyStorePath" value="/opt/pentaho/software/data-integration/pwd/keystore" />
+                <property name="keyStorePassword" value="#{T(org.pentaho.support.encryption.Encr).getInstance().decryptPasswordOptionallyEncrypted('${keystore.password}')}" />
+              </bean>
+            </constructor-arg>
+            <property name="port" value="9443" />
+          </bean> -->
+          <bean id="connector" class="org.eclipse.jetty.server.ServerConnector">
+              <constructor-arg ref="jettyServer"/>
+              <property name="port" value="9115"/> <!-- Specify the server port number -->
+          </bean>
+        </list>
+    </property>
+  </bean>
+
+  <bean id="server" class="org.pentaho.carte.clustering.server.DistributeServer" scope="singleton">
+    <property name="jetty" ref="jettyServer" />
+    <property name="activeWork" ref="activeWork" />
+    <property name="workQueue" ref="workQueue" />
+    <property name="workerServers" ref="workerServers" />
+
+    <property name="activeOnStart" value="true" /> <!-- Should the server be active when it is started? -->
+
+    <!--
+      A setting that controls if /kettle/jobStatus/ api calls should
+      proxy to the working node for active/non-finished jobs, 
+      or if they should simply respond with an XML that contains
+      the 'Running' status like queued jobs do. Setting the
+      value to true (default, historic behavior) causes the jobStatus
+      calls to be proxied to the Carte node running the job. This will
+      result in more cross talk and heavier Tray and Carte server load,
+      but the result XML has job log data. Setting the value to false, 
+      Tray immediately responds with 'Running' for active jobs, which
+      consumes fewer resources.
+    -->
+    <property name="proxyActiveWork" value="true" />
+
+    <!--
+    <property name="securityHandler">
+      <bean class="org.pentaho.carte.clustering.server.handlers.BasicSecurityHandler">
+        <property name="username" value="cluster" />
+        <property name="password" value="${security.password}" />
+      </bean>
+    </property>
+    <property name="secureWebResources" value="true" />
+    -->
+
+    <property name="finishedWork">
+      <bean id="finishedWork" class="org.pentaho.carte.clustering.server.work.finished.FinishedWork" scope="singleton">
+        <constructor-arg value="60000" />  <!-- number of milliseconds to keep finished jobs in the finished work cache (and on remote cartes) -->
+        <constructor-arg ref="server" />
+        <property name="finishedWorkListeners">
+          <list>
+            <!-- enable this bean if the entityManagerFactory bean is enabled and database persistence of finished work is desired.
+            	 this will cause the WORK_LOG table to be populated upon job finish
+             -->
+            <!--
+            <bean class="org.pentaho.carte.clustering.server.work.persist.db.LoggingFinishedWorkListener">
+              <property name="entityManagerFactory" ref="entityManagerFactory" />
+            </bean>
+             -->
+          </list>
+        </property>
+      </bean>
+    </property>
+
+    <property name="systemMetrics">
+      <bean id="systemMetrics" class="org.pentaho.carte.clustering.server.metrics.SystemMetrics" scope="singleton">
+        <constructor-arg ref="server" />
+        <property name="avgQueueTimeSamples" value="10" />  <!-- Number of recently launched jobs to consider when calculating average queue time -->
+
+        <!--  Enable the next body of code to start threads that send the metrics to a MetricCollectionReceiver
+              this could be used to push the metrics to AWS Cloudwatch, a database, the console, a log file, etc
+         -->
+        <!--
+        <property name="metricCollectionReceivers">
+          <list>
+            <bean class="org.pentaho.carte.clustering.server.metrics.MetricCollectionReceiverRunnable">
+              <property name="frequencyMillis" value="5000" />
+              <property name="metricType" value="DISTRIBUTE" />
+              <property name="collectionReceiver">
+                <bean id="loggingReceiver" class="org.pentaho.carte.clustering.server.metrics.LoggingMetricCollectionReceiver" />
+              </property>
+            </bean>
+          </list>
+        </property>
+        -->
+        </bean>
+    </property>
+
+    <property name="distributionMethod" >
+
+      <!--
+      example that selects the first server found matching job run criteria. This is
+      close to a round robin, but loads a server completely before moving onto the next
+      -->
+      <!--
+      <bean class="org.pentaho.carte.clustering.server.distribute.PickFirstDistributor" />
+       -->
+
+       <!--
+          Example that combines several metrics together with different weights to create a new
+          calculated metric called "free_resources_calc" via javascript. The new metric is
+          sorted using a "SingleMetricComparator" and the item with the highest value of
+          "free_resources_calc" is selected as the remote server for execution because
+          "reverseSort" is enabled, which instructs the comparator to sort descending
+        -->
+       <bean class="org.pentaho.carte.clustering.server.distribute.SnapshotSortDistributor">
+        <property name="metricCalculator">
+          <bean class="org.pentaho.carte.clustering.server.distribute.JavascriptMetricCalculator">
+            <property name="metricName" value="free_resources_calc" />
+            <property name="expression">
+              <value><![CDATA[
+
+              (0.25 * free_memory_mb / max_memory_mb) +
+              (0.25 * (1 - cpu_load_percentage_avg / 100)) +
+              (0.5 * allocatable_job_slots / ((typeof max_concurrent_jobs != 'undefined') ? max_concurrent_jobs: 10) )
+
+              ]]></value>
+            </property>
+          </bean>
+        </property>
+        <property name="sortingComparator">
+          <bean class="org.pentaho.carte.clustering.server.distribute.SingleMetricComparator">
+            <property name="metricName" value="free_resources_calc" />
+          </bean>
+        </property>
+        <property name="reverseSort" value="true" />  <!-- Since the metric is based on free resources, the higher the value of free_resources_calc, the better (sort descending) -->
+       </bean>
+    </property>
+
+    <property name="defaultWorkResourceConsumption">
+
+      <!--Defines how resources are consumed from a requirements string.
+          If a requirement like max_memory_mb >= 4096, then you need a machine
+          with at least 4096mb of memory to execute, and the resource banking
+          will virtually consume 4096mb of that carte server's max_memory_mb.
+
+          A new requirement will automatically be added for the consumed resource
+          requirements of allocatable_memory_mb >= 4096
+       -->
+
+      <map key-type="java.lang.String" value-type="org.pentaho.carte.clustering.server.metrics.DerefWithDefault">
+        <entry key="allocatable_memory_mb">
+          <bean class="org.pentaho.carte.clustering.server.metrics.DerefWithDefault">
+            <property name="derefMetric" value="max_memory_mb" />
+            <property name="defaultValue" value="256" />
+          </bean>
+        </entry>
+        <entry key="allocatable_job_slots">
+          <bean class="org.pentaho.carte.clustering.server.metrics.DerefWithDefault">
+            <property name="derefMetric" value="allocatable_job_slots" />
+            <property name="defaultValue" value="1" />
+          </bean>
+        </entry>
+      </map>
+
+    </property>
+
+  </bean>
+
+</beans>

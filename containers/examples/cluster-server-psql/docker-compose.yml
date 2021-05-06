@@ -1,0 +1,75 @@
+version: '3.6'
+
+services:
+
+  web:
+      image: httpd:alpine
+      ports:
+        - "${LISTEN_PORT:?no port defined}:80"
+      volumes: 
+        - ./httpd.conf:/usr/local/apache2/conf/httpd.conf:ro      
+      depends_on: 
+        - server1
+        - server2
+  
+  server1:
+      image: pentaho/pentaho-server:${PENTAHO_VERSION:-8.3.0.10}
+      hostname: server1
+      volumes: 
+        #Bindings
+        - "./configuration_override/:/docker-entrypoint-init"
+        #Volumes
+        - "server_jackrabbit1:/opt/pentaho/pentaho-server/pentaho-solutions/system/jackrabbit/repository"
+      environment: 
+        - CATALINA_OPTS=>-
+            -Xmx3g  
+            -Dfile.encoding=utf8 
+            -Dpentaho.installed.licenses.file=/run/secrets/pentaho_license 
+            -XX:+UseConcMarkSweepGC 
+            -XX:+ExplicitGCInvokesConcurrent 
+            -XX:+CMSClassUnloadingEnabled 
+            -XX:+AggressiveOpts
+      secrets:
+        - pentaho_license
+      depends_on: 
+        - repository
+
+  server2:
+      image: pentaho/pentaho-server:${PENTAHO_VERSION:-8.3.0.10}
+      hostname: server2
+      volumes: 
+        #Bindings
+        - "./configuration_override/:/docker-entrypoint-init"
+        #Volumes
+        - "server_jackrabbit2:/opt/pentaho/pentaho-server/pentaho-solutions/system/jackrabbit/repository"
+      environment: 
+        - CATALINA_OPTS=>-
+            -Xmx3g  
+            -Dfile.encoding=utf8 
+            -Dpentaho.installed.licenses.file=/run/secrets/pentaho_license 
+            -XX:+UseConcMarkSweepGC 
+            -XX:+ExplicitGCInvokesConcurrent 
+            -XX:+CMSClassUnloadingEnabled 
+            -XX:+AggressiveOpts
+      secrets:
+        - pentaho_license
+      depends_on: 
+        - repository
+      command: sh -c "sleep 1m && /opt/pentaho/pentaho-server/tomcat/bin/catalina.sh run"
+
+  repository:
+      image: postgres:9-alpine
+      environment:
+        - POSTGRES_PASSWORD=password
+      volumes:
+        - "./db_init_scripts/:/docker-entrypoint-initdb.d/"
+        - repository-data:/var/lib/postgresql/data
+
+volumes:
+    repository-data:
+    server_jackrabbit1:
+    server_jackrabbit2:
+
+secrets:
+  pentaho_license:
+    file: "./../../local/installedLicenses.xml"
