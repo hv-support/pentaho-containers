@@ -9,3 +9,4 @@ containers/pentaho-data-integration/pdi-client-gcp/resources/demo/*
 containers/pentaho-data-integration/pdi-client-gcp/resources/pwd/*
 containers/tray/predownloaded/*.zip
 containers/pentaho-server/pentaho-server-9.1/predownloaded/*.zip
+containers/pentaho-server/pentaho-server-9.1/predownloaded/*.bin
