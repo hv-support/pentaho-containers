@@ -10,3 +10,7 @@ containers/pentaho-data-integration/pdi-client-gcp/resources/pwd/*
 containers/tray/predownloaded/*.zip
 containers/pentaho-server/pentaho-server-9.1/predownloaded/*.zip
 containers/pentaho-server/pentaho-server-9.1/predownloaded/*.bin
+containers/pentaho-server/pentaho-server-8.3/predownloaded/*.zip
+containers/pentaho-server/pentaho-server-8.3/predownloaded/*.bin
+kubernetes/pentaho-server/postgres-config/*
+

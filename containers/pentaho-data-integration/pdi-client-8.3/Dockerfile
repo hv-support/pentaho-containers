@@ -4,8 +4,6 @@
 # build image (pack) moves from install_unpack the files and defines workspace, entry-poit and others #
 #######################################################################################################
 
-
-
 ##################################################################################################
 # Here we use a "build" image for packing to make the final image as small as possible           #
 ##################################################################################################
@@ -13,12 +11,21 @@ FROM openjdk:8-jre as install_unpack
 
 WORKDIR /opt/pentaho-installer/
 
-
-#ARGUMENTS
-# Name of the package. This file have to be pre-downloaded and placed on "predownloaded" folder
-ARG FILE_SOFTWARE=pdi-ee-client-8.3.0.0-371-dist.zip
-ARG FILE_RELEASE_NAME=pdi-ee-client-8.3.0.0-371
+#Arguments definition
 ARG INSTALLATION_PATH=/opt/pentaho
+ARG INSTALLER_PATH=/opt/pentaho-installer
+## Arguments for regular Pentaho client install
+ARG PENTAHO_INSTALLER_NAME=pdi-ee-client
+ARG PENTAHO_VERSION=8.3.0.0
+ARG PENTAHO_PACKAGE_DIST=371
+ARG FILE_SOFTWARE=${PENTAHO_INSTALLER_NAME}-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}-dist.zip
+ARG FILE_RELEASE_NAME=${PENTAHO_INSTALLER_NAME}-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}
+
+## Arguments required if SP is applied
+ARG SERVICE_PACK_VERSION=8.3.0.10
+#ARG SERVICE_PACK_VERSION
+ARG SERVICE_PACK_DIST=816
+ARG SERVICE_PACK_FILENAME=PDIClient-SP-${SERVICE_PACK_VERSION}-${SERVICE_PACK_DIST}.bin
 
 #Copy to temporary location the content of predownloaded folder
 COPY ./predownloaded/* /opt/pentaho-installer/
@@ -34,6 +41,18 @@ RUN if [ ! -f "/opt/pentaho-installer/$FILE_SOFTWARE" ]; \
 RUN unzip ${FILE_SOFTWARE}; 
 RUN java -DINSTALL_PATH=${INSTALLATION_PATH} -DEULA_ACCEPT=true -jar ./${FILE_RELEASE_NAME}/installer.jar -options-system; 
 
+# If SP is required
+RUN if [ ! -z "${SERVICE_PACK_VERSION}" ]; then \
+        if [ ! -f "${INSTALLER_PATH}/${SERVICE_PACK_FILENAME}" ]; then \
+            echo "SP file ${SERVICE_PACK_FILENAME} NOT found in predownloaded folder, please download required artifact and copy to predownloaded folder or not specify SERVICE_PACK if not required"; exit 2; \
+        else \
+            chmod 755 ${INSTALLER_PATH}/${SERVICE_PACK_FILENAME}; \
+            ${INSTALLER_PATH}/${SERVICE_PACK_FILENAME} -i silent -DEULA_ACCEPT=true -DUSER_INSTALL_DIR=${INSTALLATION_PATH}/data-integration -DSILENT_LOG=${INSTALLER_PATH}/pentaho-servicepack-installer.log; \
+            cat ${INSTALLER_PATH}/pentaho-servicepack-installer.log; \
+        fi \
+    else \
+        echo "Standard installation, no SP defined"; \
+    fi;
 
 ##########################################
 # Copy External Resources
@@ -56,9 +75,15 @@ FROM openjdk:8u282-jdk as pack
 ARG INSTALLATION_PATH=/opt/pentaho
 
 # Create unprivileged user
-ENV PENTAHO_UID="1000"
+ENV PENTAHO_UID=5000
+ENV PENTAHO_USER=pentaho
 ENV PENTAHO_HOME=/home/pentaho 
-RUN useradd -u "${PENTAHO_UID:?}" -g 0 -s "$(command -v bash)" -md "${PENTAHO_HOME:?}" pentaho
+ENV PENTAHO_LICENSE_PATH=
+
+# Create user for non-root account
+RUN groupadd --gid ${PENTAHO_UID} ${PENTAHO_USER} \
+    && useradd --home-dir ${PENTAHO_HOME} --create-home --uid ${PENTAHO_UID} \
+    --gid ${PENTAHO_UID} --shell /bin/bash --skel /dev/null ${PENTAHO_USER}
 
 #Default to Windows host, please override for other cases
 #ENV DISPLAY=host.docker.internal:0
@@ -85,5 +110,5 @@ ENV PENTAHO_DI_JAVA_OPTIONS="-Dfile.encoding=utf8 -Dpentaho.installed.licenses.f
 #         then it can use all the host memory.
 # -XX:MinRAMPercentage=60.0 -XX:MaxRAMPercentage=90.0
 
-#Drop root privileges
-USER 1000:0
+#Use pentaho user
+USER ${PENTAHO_USER}

@@ -7,8 +7,8 @@ ARG INSTALLATION_PATH=/opt/pentaho
 ARG INSTALLER_PATH=/opt/pentaho-installer
 ## Arguments for regular Pentaho Server install
 ARG PENTAHO_INSTALLER_NAME=pentaho-server-ee
-ARG PENTAHO_VERSION=9.1.0.0
-ARG PENTAHO_PACKAGE_DIST=324
+ARG PENTAHO_VERSION=8.3.0.0
+ARG PENTAHO_PACKAGE_DIST=371
 ARG FILE_SOFTWARE=${PENTAHO_INSTALLER_NAME}-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}-dist.zip
 ARG FILE_RELEASE_NAME=${PENTAHO_INSTALLER_NAME}-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}
 ## Arguments related to Pentaho Server plugins
@@ -17,9 +17,9 @@ ARG FILE_PIR=pir-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}-dist.zip
 ARG FILE_PDD=pdd-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}-dist.zip
 
 ## Arguments required if SP is applied
-ARG SERVICE_PACK_VERSION=9.1.0.7
+ARG SERVICE_PACK_VERSION=
 #ARG SERVICE_PACK_VERSION
-ARG SERVICE_PACK_DIST=567
+ARG SERVICE_PACK_DIST=
 ARG SERVICE_PACK_FILENAME=PentahoServer-SP-${SERVICE_PACK_VERSION}-${SERVICE_PACK_DIST}.bin
 
 #Copy from local predownloaded folder al the artifacts required for Pentaho installation
@@ -43,19 +43,19 @@ RUN java -DINSTALL_PATH=${INSTALLATION_PATH} -DEULA_ACCEPT=true -jar ./${FILE_RE
 RUN if [ -f "${FILE_PAZ}" ]; \
     then \
         unzip ${FILE_PAZ}; \
-        java -DINSTALL_PATH=/opt/pentaho/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./paz-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
+        java -DINSTALL_PATH=${INSTALLATION_PATH}/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./paz-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
     fi;
 
 RUN if [ -f "${FILE_PIR}" ]; \
     then \
         unzip ${FILE_PIR}; \
-        java -DINSTALL_PATH=/opt/pentaho/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pir-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
+        java -DINSTALL_PATH=${INSTALLATION_PATH}/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pir-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
     fi;
 
 RUN if [ -f "${FILE_PDD}" ]; \
     then \
         unzip ${FILE_PDD}; \
-        java -DINSTALL_PATH=/opt/pentaho/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pdd-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
+        java -DINSTALL_PATH=${INSTALLATION_PATH}/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pdd-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
     fi;
 
 

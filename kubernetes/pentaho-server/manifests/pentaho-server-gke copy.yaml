@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pentaho-server-service
+  labels:
+    app: pentaho-server-service
+spec:
+  type: NodePort
+  selector:
+    app: pentaho-server
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pentaho-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pentaho-server
+  template:
+    metadata:
+      labels:
+        app: pentaho-server
+    spec:
+      volumes:
+        - name: key
+          secret:
+            secretName: key
+        - name: pentaho-license
+          secret:
+            secretName: pentaho-license
+        - name: pentaho-custom-volume
+          persistentVolumeClaim:
+            claimName: pentaho-server-custom-pvc
+      initContainers:
+      - name: config-container
+        #image: gcr.io/google-containers/ubuntu:14.04
+        image: gcr.io/pentaho-support-team/pentaho/pentaho-server:9.1.0.7
+        imagePullPolicy: Always
+        command: ["/bin/sh","-c"]  
+        args: ["apt-get update; apt-get install -y curl unzip; \
+              curl -k -sSL https://sdk.cloud.google.com > /tmp/gcl && bash /tmp/gcl --install-dir=~/gcloud --disable-prompts; \
+              export PATH=$PATH:/root/gcloud/google-cloud-sdk/bin; \
+              echo \"--------------------------\" ; \
+              ls /secrets/key;\
+              cat $CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE ; \
+              gcloud auth activate-service-account --key-file=$CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE; \
+              echo $GCOUD_PENTAHO_PROJECT_PATH; \
+              gsutil cp -r $GCOUD_PENTAHO_PROJECT_PATH/* /docker-entrypoint-init/
+              "] 
+        env:
+          - name: GCOUD_PENTAHO_PROJECT_PATH
+            value: "gs://support-emea-hv/pentaho-gke/psql12-config"
+          - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
+            value: "/secrets/key/key.json"
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "/secrets/key/key.json"
+        volumeMounts:
+        - name: pentaho-custom-volume
+          mountPath: /docker-entrypoint-init  
+        - name: key
+          mountPath: "/secrets/key"
+      containers:
+      - name: psql
+
+      - name: pentaho-server
+        image: gcr.io/pentaho-support-team/pentaho/pentaho-server:9.1.0.7
+        imagePullPolicy: "Always"
+        resources:
+          limits:
+            memory: "4500Mi"
+          requests:
+            memory: "2000Mi"
+        ports:
+          - containerPort: 8080
+        volumeMounts:
+            - name: key
+              mountPath: "/secrets/key"
+            - name: pentaho-license
+              mountPath: "/secrets/pentahoLicense"
+            - name: pentaho-custom-volume
+              mountPath: /docker-entrypoint-init
+        env:
+            - name: GCOUD_PENTAHO_PROJECT_PATH
+              value: "gs://support-emea-hv/pentaho-gke/psql12-config"
+            - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
+              value: "/secrets/key/key.json"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/secrets/key/key.json"
+            - name: PENTAHO_INSTALLED_LICENSE_PATH
+              value: "/secrets/pentahoLicense/.installedLicenses.xml"
+            - name: PENTAHO_DI_JAVA_OPTIONS
+              value: "-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:+UseCGroupMemoryLimitForHeap -Dfile.encoding=utf8 -XX:MaxRAMPercentage=80.0 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC"                
+        #command: ["./kitchen -file=$PENTAHO_PROJECT_PATH/generateLongLog.kjb"]  
+        #command: ["bash"]
+        #args: ["/opt/pentaho/data-integration/carte.sh", "/opt/pentaho/data-integration/pwd/carte-config-master-8080.xml"]  
+        #args: ["/opt/pentaho/data-integration/carte.sh", "$CURRENT_HOSTNAME", "8080"]  
+        #args: ["bash"]
+        
