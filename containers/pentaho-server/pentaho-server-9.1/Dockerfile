@@ -43,19 +43,19 @@ RUN java -DINSTALL_PATH=${INSTALLATION_PATH} -DEULA_ACCEPT=true -jar ./${FILE_RE
 RUN if [ -f "${FILE_PAZ}" ]; \
     then \
         unzip ${FILE_PAZ}; \
-        java -DINSTALL_PATH=/opt/pentaho/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./paz-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
+        java -DINSTALL_PATH=${INSTALLATION_PATH}/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./paz-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
     fi;
 
 RUN if [ -f "${FILE_PIR}" ]; \
     then \
         unzip ${FILE_PIR}; \
-        java -DINSTALL_PATH=/opt/pentaho/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pir-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
+        java -DINSTALL_PATH=${INSTALLATION_PATH}/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pir-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
     fi;
 
 RUN if [ -f "${FILE_PDD}" ]; \
     then \
         unzip ${FILE_PDD}; \
-        java -DINSTALL_PATH=/opt/pentaho/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pdd-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
+        java -DINSTALL_PATH=${INSTALLATION_PATH}/pentaho-server/pentaho-solutions/system/ -DEULA_ACCEPT=true -jar ./pdd-plugin-ee-${PENTAHO_VERSION}-${PENTAHO_PACKAGE_DIST}/installer.jar -options-system; \
     fi;
 
 

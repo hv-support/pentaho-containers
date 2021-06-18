@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mssql-server
+spec:
+  securityContext:
+    fsGroup: 10001
+  volumes:
+  - name: init-databases-volume
+    configMap:
+      name: init-db-scripts-mssql
+      defaultMode: 0777
+  containers:
+  - name: mssql
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    #image: genschsa/mssql-server-linux:latest
+    ports:
+    - containerPort: 1433
+    env:
+    - name: MSSQL_PID
+      value: "Developer"
+    - name: ACCEPT_EULA
+      value: "Y"
+    - name: SA_PASSWORD
+      value: "MyP@ssw0rd"
+    volumeMounts:
+    - name: init-databases-volume
+      mountPath: /docker-entrypoint-initdb.d
+    securityContext:
+      allowPrivilegeEscalation: false 
+    #command: ["/opt/mssql/bin/sqlservr","&","sh","-c","/docker-entrypoint-initdb.d/initialize.sh"] 
+    #command: ["sh","-c","/docker-entrypoint-initdb.d/initialize.sh","&","/opt/mssql/bin/sqlservr"] 
+    #args: ["/opt/mssql/bin/sqlservr"]
+    #command: ["/bin/sh","-c"]
+    args: ["/docker-entrypoint-initdb.d/docker-entrypoint.sh"]
+    
