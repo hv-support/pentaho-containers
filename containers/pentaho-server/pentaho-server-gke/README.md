@@ -4,7 +4,7 @@ Target tag : pentaho/pentaho-server-gke:<PENTAHO_VERSION>
 
 * Expected mandatory argument
 
-**ARG ENTAHO_SERVER_BASE_TAG**. It represent the version of the base image to be used.
+**ARG PENTAHO_SERVER_BASE_TAG**. It represent the version of the base image to be used.
 
 Specific layer for Pentaho server (no matter what version) to have it ready to interact with GCP environment
 
