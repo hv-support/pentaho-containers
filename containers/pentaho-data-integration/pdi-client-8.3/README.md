@@ -39,7 +39,7 @@ docker build -t pentaho/pdi-client:8.3.0.0 .
 Build with Service Pack. Example using 8.3 SP 12
 
 ```bash
-docker build -f Dockerfile -t pentaho/pdi-client:8.3.0.12 --build-arg FILE_SOFTWARE_SERVICEPACK=PDIClient-SP-8.3.0.12-869.bin .
+docker build -f ./Dockerfile --build-arg SERVICE_PACK_VERSION=8.3.0.22 --build-arg SERVICE_PACK_DIST=1241 -t pentaho/pentaho-server:8.3.0.22 .
 ```
 
 # Usage of resultant image
