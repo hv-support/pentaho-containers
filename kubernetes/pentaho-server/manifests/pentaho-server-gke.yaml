@@ -60,7 +60,7 @@ spec:
           - name: init-databases-volume
             mountPath: /docker-entrypoint-initdb.d
       - name: pentaho-server
-        image: gcr.io/pentaho-support-team/pentaho/pentaho-server-gke:8.3.0.22
+        image: gcr.io/pentaho-support-team/pentaho/pentaho-server-gke:8.3.0.0
         imagePullPolicy: "Always"
         resources:
           limits:
@@ -76,7 +76,8 @@ spec:
               mountPath: "/secrets/pentahoLicense"
         env:
             - name: GCS_PENTAHO_CONFIG_PATH
-              value: "gs://support-emea-hv/pentaho-gke/psql12-config"
+              #value: "gs://support-emea-hv/pentaho-gke/psql12-config"
+              value: "gs://support-emea-hv/pentaho-gke/postgresql/newJDBC"
             - name: PENTAHO_INSTALLATION_PATH
               value: "/opt/pentaho/pentaho-server"
             - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE

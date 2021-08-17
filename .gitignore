@@ -8,6 +8,7 @@ containers/pentaho-data-integration/pdi-client-8.3/resources/lib/*
 containers/pentaho-data-integration/pdi-client-gcp/resources/plugins/*
 containers/pentaho-data-integration/pdi-client-gcp/resources/demo/*
 containers/pentaho-data-integration/pdi-client-gcp/resources/pwd/*
+containers/pentaho-server/pentaho-server-8.3/Dockerfile.Ubuntu20.04
 containers/tray/predownloaded/*.zip
 containers/pentaho-server/pentaho-server-9.1/predownloaded/*.zip
 containers/pentaho-server/pentaho-server-9.1/predownloaded/*.bin

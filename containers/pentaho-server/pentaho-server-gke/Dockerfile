@@ -11,7 +11,7 @@ FROM pentaho/pentaho-server:${PENTAHO_SERVER_BASE_TAG}
 #USER pentaho
 
 ## Install required packages to work in GCP, mainly GCP SDK
-RUN apt-get install curl unzip -y; \
+RUN apt-get install curl unzip python -y; \
     curl -k -sSL https://sdk.cloud.google.com > /tmp/gcl && bash /tmp/gcl --install-dir=~/gcloud --disable-prompts
 
 ENV PATH $PATH:/root/gcloud/google-cloud-sdk/bin

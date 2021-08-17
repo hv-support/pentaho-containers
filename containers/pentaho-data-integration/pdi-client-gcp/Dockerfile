@@ -1,6 +1,10 @@
+#Argument to define what version of Pentaho server should be used
+#Important: this is only available if you are using Docker version at least 18.09.8, build bfed4f5
+ARG PENTAHO_CLIENT_BASE_TAG=latest
+
 # Starting point based on pdi-client base image either GA or with SP applied. 
 # Adapt version accordingly based on your previous build command for it 
-FROM pentaho/pdi-client:8.3.0.8
+FROM pentaho/pdi-client:${PENTAHO_CLIENT_BASE_TAG}
 
 ## Install required packages to work in GCP, mainly GCP SDK
 RUN apt-get install curl unzip -y; \
