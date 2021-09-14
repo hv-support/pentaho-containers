@@ -36,7 +36,7 @@ docker build -f ./Dockerfile -t pentaho/ pentaho/pdi-client-gcp:8.3.0.0 .
 Build specifying base image to be used: 
 
 ```bash
-docker build -f ./Dockerfile --build-arg "PENTAHO_CLIENT_BASE_TAG=8.3.0.0" -t pentaho/ pentaho/pdi-client-gcp:8.3.0.0 .
+docker build -f ./Dockerfile --build-arg "PENTAHO_CLIENT_BASE_TAG=8.3.0.0" -t pentaho/pdi-client-gcp:8.3.0.0 .
 ```
 
 # Usage of resultant image
