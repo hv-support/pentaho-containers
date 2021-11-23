@@ -96,13 +96,6 @@ RUN groupadd --gid ${PENTAHO_UID} ${PENTAHO_USER} \
     && useradd --home-dir ${PENTAHO_HOME} --create-home --uid ${PENTAHO_UID} \
     --gid ${PENTAHO_UID} --shell /bin/bash --skel /dev/null ${PENTAHO_USER}
 
-#Default to Windows host, please override for other cases
-ENV DISPLAY=host.docker.internal:0
-
-#This Setting is to skipe WEB TOOLKIT GTK Check. Since the use of this mack normally does no use GUI.
-# If you want GUI, then istall libwebkitgtk-1.0-0 as the line commented above
-ENV SKIP_WEBKITGTK_CHECK=1
-
 # Use installed software from installation base and assign non-elevated-privileges user in destination path
 COPY --from=install_unpack --chown=${PENTAHO_USER}:${PENTAHO_USER} ${INSTALLATION_PATH}/pentaho-server/ ${INSTALLATION_PATH}/pentaho-server/
 
