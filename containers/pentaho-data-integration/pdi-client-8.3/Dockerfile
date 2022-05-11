@@ -92,13 +92,10 @@ RUN groupadd --gid ${PENTAHO_UID} ${PENTAHO_USER} \
 # If you want GUI, then istall libwebkitgtk-1.0-0 as the line commented above
 ENV SKIP_WEBKITGTK_CHECK=1
 
-COPY --from=install_unpack  ${INSTALLATION_PATH}/data-integration/ ${INSTALLATION_PATH}/data-integration/
+COPY --from=install_unpack --chown=${PENTAHO_USER}:root ${INSTALLATION_PATH}/data-integration/ ${INSTALLATION_PATH}/data-integration/
 
 #While this volume is for License, you can use "secrets" and point to /run/secrets/installedLicenses.xml.
 VOLUME [ "${INSTALLATION_PATH}/pentahoLicense/"]
-
-#Assign permissions to pentaho on /opt/pentaho
-RUN chown -R pentaho:root ${INSTALLATION_PATH}
 
 #Use data-integration installation dir as WORKDIR
 WORKDIR ${INSTALLATION_PATH}/data-integration
